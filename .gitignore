@@ -1,0 +1,24 @@
+```gitignore
+.env
+.env.*
+!.env.example
+
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.vscode/
+
+# Python
+*.pyo
+*.pyd
+
+# Logs
+*.log
+logs/
+
+# Secrets and local overrides
+secrets/
+docker-compose.override.yml
+```

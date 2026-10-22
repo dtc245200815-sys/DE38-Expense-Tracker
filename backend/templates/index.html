@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Expense Tracker - Quản lý chi tiêu</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6fb;
+            color: #243047;
+        }
+        header {
+            background: #1e3475;
+            color: white;
+            padding: 24px max(20px, calc((100% - 1100px) / 2));
+        }
+        header h1 { margin: 0 0 8px; }
+        header p { margin: 0; color: #dbe5ff; }
+        main { max-width: 1100px; margin: 28px auto; padding: 0 18px; }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .card, .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 3px 12px #1725540c;
+        }
+        .card span { color: #667085; }
+        .amount { font-size: 24px; font-weight: bold; margin-top: 10px; }
+        .panel { margin-bottom: 22px; }
+        form .fields {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+        label { display: block; font-weight: 600; font-size: 14px; }
+        input, select {
+            width: 100%;
+            margin-top: 7px;
+            padding: 11px;
+            border: 1px solid #d0d5dd;
+            border-radius: 7px;
+            background: white;
+        }
+        button {
+            padding: 10px 15px;
+            border: 0;
+            border-radius: 7px;
+            background: #1e3475;
+            color: white;
+            cursor: pointer;
+        }
+        .submit { margin-top: 16px; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eaecf0; }
+        th { color: #667085; font-size: 13px; }
+        .income { color: #16803c; }
+        .expense { color: #c0392b; }
+        .delete { background: #b42318; }
+        .empty { text-align: center; color: #667085; padding: 25px; }
+        footer { text-align: center; color: #667085; padding: 20px; }
+        @media (max-width: 650px) {
+            .cards { grid-template-columns: 1fr; }
+            form .fields { grid-template-columns: 1fr; }
+            .amount { font-size: 21px; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Expense Tracker</h1>
+    <p>Quản lý thu nhập và chi tiêu cá nhân</p>
+</header>
+
+<main>
+    <section class="cards">
+        <div class="card">
+            <span>Tổng thu nhập</span>
+            <div class="amount income">
+                {{ "{:,.0f}".format(totals.total_income) }} đ
+            </div>
+        </div>
+        <div class="card">
+            <span>Tổng chi tiêu</span>
+            <div class="amount expense">
+                {{ "{:,.0f}".format(totals.total_expense) }} đ
+            </div>
+        </div>
+        <div class="card">
+            <span>Số dư</span>
+            <div class="amount">
+                {{ "{:,.0f}".format(totals.balance) }} đ
+            </div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>Thêm giao dịch</h2>
+        <form method="post" action="/transactions">
+            <div class="fields">
+                <label>
+                    Nội dung
+                    <input name="description" maxlength="200"
+                           placeholder="Ví dụ: Lương tháng 10" required>
+                </label>
+                <label>
+                    Danh mục
+                    <input name="category" maxlength="100"
+                           placeholder="Ví dụ: Lương, Ăn uống" required>
+                </label>
+                <label>
+                    Loại giao dịch
+                    <select name="transaction_type" required>
+                        <option value="income">Thu nhập</option>
+                        <option value="expense">Chi tiêu</option>
+                    </select>
+                </label>
+                <label>
+                    Số tiền (VNĐ)
+                    <input name="amount" type="number" min="0.01"
+                           max="999999999999.99" step="0.01" required>
+                </label>
+                <label>
+                    Ngày giao dịch
+                    <input name="transaction_date" type="date" required>
+                </label>
+            </div>
+            <button class="submit" type="submit">Thêm giao dịch</button>
+        </form>
+    </section>
+
+    <section class="panel">
+        <h2>Lịch sử giao dịch</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ngày</th>
+                        <th>Nội dung</th>
+                        <th>Danh mục</th>
+                        <th>Loại</th>
+                        <th>Số tiền</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in transactions %}
+                    <tr>
+                        <td>{{ item.transaction_date.strftime("%d/%m/%Y") }}</td>
+                        <td>{{ item.description }}</td>
+                        <td>{{ item.category }}</td>
+                        <td class="{{ item.transaction_type }}">
+                            {{ "Thu nhập" if item.transaction_type == "income" else "Chi tiêu" }}
+                        </td>
+                        <td>{{ "{:,.0f}".format(item.amount) }} đ</td>
+                        <td>
+                            <form method="post"
+                                  action="/transactions/{{ item.id }}/delete"
+                                  onsubmit="return confirm('Bạn có chắc muốn xóa giao dịch này?')">
+                                <button class="delete" type="submit">Xóa</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="6" class="empty">
+                        Chưa có giao dịch. Hãy thêm giao dịch đầu tiên.
+                    </td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<footer>Expense Tracker — Đề tài 38</footer>
+</body>
+</html>
